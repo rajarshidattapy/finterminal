@@ -51,7 +51,7 @@ func Open(path string) *Log {
 
 var (
 	reEmail = regexp.MustCompile(`[\w.+-]+@[\w-]+\.[\w.]+`)
-	rePhone = regexp.MustCompile(`(\+?\d[\d\- ]{7,}\d)`)
+	rePhone = regexp.MustCompile(`\+?\d[\d\- ]{8,}\d`)
 	reCard  = regexp.MustCompile(`\b\d{12,19}\b`)
 )
 
@@ -69,8 +69,10 @@ func Redact(s string) string {
 			}
 			return -1
 		}, m)
-		if len(d) < 4 {
-			return "****"
+		// Ten digits or more is a phone number; anything shorter is a date, an
+		// amount or an id, and mangling those would make the log unreadable.
+		if len(d) < 10 {
+			return m
 		}
 		return "*******" + d[len(d)-4:]
 	})
@@ -83,12 +85,17 @@ func (l *Log) Append(e Entry) error {
 	if e.TS.IsZero() {
 		e.TS = time.Now()
 	}
+	// Redaction happens field by field, before marshalling: running it over the
+	// finished JSON line would eat timestamps and ids too.
 	e.Utterance = Redact(e.Utterance)
+	e.Refusal = Redact(e.Refusal)
+	e.Plan = redactValue(e.Plan)
+	e.Policy = redactValue(e.Policy)
 	raw, err := json.Marshal(e)
 	if err != nil {
 		return err
 	}
-	line := Redact(string(raw))
+	line := string(raw)
 	f, err := os.OpenFile(l.Path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
 	if err != nil {
 		return err
@@ -96,6 +103,18 @@ func (l *Log) Append(e Entry) error {
 	defer f.Close()
 	_, err = f.WriteString(line + "\n")
 	return err
+}
+
+// redactValue re-encodes a nested value with its strings redacted.
+func redactValue(v any) any {
+	if v == nil {
+		return nil
+	}
+	b, err := json.Marshal(v)
+	if err != nil {
+		return nil
+	}
+	return json.RawMessage(Redact(string(b)))
 }
 
 // Tail returns the last n entries, oldest first.

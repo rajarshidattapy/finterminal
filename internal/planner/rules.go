@@ -109,20 +109,24 @@ func (r *RulesPlanner) planQuery(u, raw string, now time.Time) *Plan {
 	case hasAny(u, "settlement", "settled", "payout to my bank", "bank account credit", "settle"):
 		q.Capability = CapSettlementSummary
 
-	case hasAny(u, "why are", "why did", "failing", "failure", "failed payment", "decline",
-		"error", "fail ho rahe", "kyun fail"):
-		if hasAny(u, "revenue", "sales", "gmv", "income", "kamai") && hasAny(u, "drop", "down", "fall", "fell", "decline", "kam") {
+	// A failure question needs both a failure word and an explanatory cue.
+	// "failed payments this week" is a listing; "why did payments fail" is not.
+	case hasAny(u, "fail", "decline", "error") &&
+		hasAny(u, "why", "kyun", "reason", "investigate", "analysis", "analyse", "analyze",
+			"what errors", "error codes", "failing", "fail ho rahe", "declin"):
+		if hasAny(u, "revenue", "revenu", "sales", "gmv", "income", "kamai") && hasAny(u, "drop", "down", "fall", "fell", "decline", "kam") {
 			q.Capability = CapRevenueBreakdown
 			q.CompareTo = "previous_period"
 		} else {
 			q.Capability = CapFailureAnalysis
 		}
 
-	case hasAny(u, "success rate", "conversion rate", "success ratio", "kitne percent success"):
+	case hasAny(u, "success rate", "sucess rate", "succes rate", "conversion rate",
+		"success ratio", "sucess", "kitne percent success"):
 		q.Capability = CapSuccessRate
 
-	case hasAny(u, "revenue", "sales", "gmv", "turnover", "income", "how much did i make",
-		"kitna kamaya", "kamai", "total collected", "collections"):
+	case hasAny(u, "revenue", "revenu", "revanue", "sales", "gmv", "turnover", "income",
+		"how much did i make", "kitna kamaya", "kamai", "total collected", "collections"):
 		q.Capability = CapRevenueBreakdown
 		if hasAny(u, "drop", "down", "fall", "fell", "decline", "change", "compare", "vs", "kam") {
 			q.CompareTo = "previous_period"

@@ -72,9 +72,9 @@ func Capabilities() (read, write map[Capability]string) {
 
 // Filters are the only query narrowing the planner may express.
 type Filters struct {
-	Method        string `json:"method,omitempty"`
-	Status        string `json:"status,omitempty"`
-	MinAmountPaise int64 `json:"min_amount_paise,omitempty"`
+	Method         string `json:"method,omitempty"`
+	Status         string `json:"status,omitempty"`
+	MinAmountPaise int64  `json:"min_amount_paise,omitempty"`
 }
 
 type Window struct {
@@ -102,12 +102,12 @@ type WriteIntent struct {
 }
 
 type Plan struct {
-	Kind    Kind         `json:"kind"`
-	Query   *QueryPlan   `json:"query,omitempty"`
-	Write   *WriteIntent `json:"write,omitempty"`
-	Reason  string       `json:"reason,omitempty"` // populated on refusal
-	Source  string       `json:"source"`           // "rules" or "llm"
-	LatencyMS int64      `json:"latency_ms"`
+	Kind      Kind         `json:"kind"`
+	Query     *QueryPlan   `json:"query,omitempty"`
+	Write     *WriteIntent `json:"write,omitempty"`
+	Reason    string       `json:"reason,omitempty"` // populated on refusal
+	Source    string       `json:"source"`           // "rules" or "llm"
+	LatencyMS int64        `json:"latency_ms"`
 }
 
 var (

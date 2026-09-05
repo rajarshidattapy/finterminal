@@ -44,11 +44,11 @@ type Anthropic struct {
 func (a *Anthropic) Name() string { return "anthropic/" + a.Model }
 
 type anthropicReq struct {
-	Model       string     `json:"model"`
-	MaxTokens   int        `json:"max_tokens"`
-	Temperature float64    `json:"temperature"`
-	System      string     `json:"system,omitempty"`
-	Messages    []anthMsg  `json:"messages"`
+	Model       string    `json:"model"`
+	MaxTokens   int       `json:"max_tokens"`
+	Temperature float64   `json:"temperature"`
+	System      string    `json:"system,omitempty"`
+	Messages    []anthMsg `json:"messages"`
 }
 
 type anthMsg struct {

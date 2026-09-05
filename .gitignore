@@ -1,0 +1,6 @@
+finterminal
+finterminal.exe
+*.db
+*.db-wal
+*.db-shm
+ai-audit.log

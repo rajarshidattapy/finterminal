@@ -57,11 +57,22 @@ type Decision struct {
 	IdempotencyKey string  `json:"idempotency_key,omitempty"`
 }
 
+// add records a gate. `detail` is the refusal shown if it fails; a passing
+// gate carries no detail, so the audit log never reads as if it refused.
 func (d *Decision) add(name string, pass bool, detail string) {
-	d.Checks = append(d.Checks, Check{Name: name, Pass: pass, Detail: detail})
-	if !pass && d.Refusal == "" {
-		d.Refusal = detail
+	c := Check{Name: name, Pass: pass}
+	if !pass {
+		c.Detail = detail
+		if d.Refusal == "" {
+			d.Refusal = detail
+		}
 	}
+	d.Checks = append(d.Checks, c)
+}
+
+// note records a gate that passed, with evidence worth keeping.
+func (d *Decision) note(name, detail string) {
+	d.Checks = append(d.Checks, Check{Name: name, Pass: true, Detail: detail})
 }
 
 // Evaluate runs the gates in order. `fresh` must be a view read from the API
@@ -91,7 +102,7 @@ func Evaluate(cfg Config, s Session, w *planner.WriteIntent, fresh *analytics.Pa
 		if fresh == nil {
 			d.add("fresh_reread", false, "Could not re-read the payment; refusing to render a confirmation from context.")
 		} else {
-			d.add("fresh_reread", true, fmt.Sprintf("re-read %s at %s",
+			d.note("fresh_reread", fmt.Sprintf("re-read %s at %s",
 				fresh.ID, fresh.FetchedAt.Format(time.RFC3339)))
 			d.add("entity_status", fresh.Status == "captured",
 				fmt.Sprintf("Payment %s is %s, not captured — nothing to refund.", fresh.ID, fresh.Status))
@@ -108,7 +119,7 @@ func Evaluate(cfg Config, s Session, w *planner.WriteIntent, fresh *analytics.Pa
 		if fresh == nil {
 			d.add("fresh_reread", false, "Could not re-read the payment; refusing to render a confirmation from context.")
 		} else {
-			d.add("fresh_reread", true, fmt.Sprintf("re-read %s at %s", fresh.ID, fresh.FetchedAt.Format(time.RFC3339)))
+			d.note("fresh_reread", fmt.Sprintf("re-read %s at %s", fresh.ID, fresh.FetchedAt.Format(time.RFC3339)))
 			d.add("entity_status", fresh.Status == "authorized",
 				fmt.Sprintf("Payment %s is %s; only an authorized payment can be captured.", fresh.ID, fresh.Status))
 		}

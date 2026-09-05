@@ -58,7 +58,9 @@ type Result struct {
 // Generate builds 90 days of history ending at `now` and writes it to the store.
 func Generate(s *store.Store, now time.Time, days int) (*Result, error) {
 	rnd := rand.New(rand.NewSource(Seed))
-	start := now.AddDate(0, 0, -days).Truncate(24 * time.Hour)
+	// Local midnight, not a UTC-truncated epoch: an hour-of-day pattern in the
+	// data has to mean the same hour the merchant would see on their clock.
+	start := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location()).AddDate(0, 0, -days)
 
 	var payments []model.Payment
 	var orders []model.Order
@@ -99,8 +101,12 @@ func Generate(s *store.Store, now time.Time, days int) (*Result, error) {
 			if method == "upi" {
 				failProb = 0.095
 				if degraded {
-					// The trailing week's UPI failure spike.
-					failProb = 0.185
+					// The trailing week's UPI failure spike: a bank downtime
+					// window at night, plus a milder daytime rise.
+					failProb = 0.14
+					if hour >= 1 && hour < 4 {
+						failProb = 0.72
+					}
 				}
 			}
 			if degraded && method != "upi" {
@@ -161,7 +167,7 @@ func Generate(s *store.Store, now time.Time, days int) (*Result, error) {
 		}
 
 		// A daily settlement, T+2, for processed volume.
-		if d%1 == 0 && daysAgo > 2 {
+		if daysAgo > 2 {
 			var gross int64
 			for _, p := range payments {
 				if p.Status == "captured" && sameDay(p.CreatedAt, day) {

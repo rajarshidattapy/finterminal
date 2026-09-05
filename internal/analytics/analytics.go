@@ -297,16 +297,22 @@ func (e *Engine) FailureAnalysis(w Window, method string) (*FactSet, error) {
 	}
 
 	// Hour-of-day clustering: report the 4-hour band holding the most failures.
-	hrows, err := e.query(`SELECT CAST(strftime('%H', created_at, 'unixepoch', '+5 hours', '+30 minutes') AS INTEGER), COUNT(*)
-        FROM payments WHERE status='failed' AND created_at >= ? AND created_at < ? GROUP BY 1`,
-		w.From.Unix(), w.To.Unix())
+	// Bucketing happens in Go so the answer follows the operator's own clock
+	// rather than whatever timezone SQLite was built against.
+	hq := `SELECT created_at FROM payments WHERE status='failed' AND created_at >= ? AND created_at < ?`
+	hargs := []any{w.From.Unix(), w.To.Unix()}
+	if method != "" {
+		hq += ` AND method = ?`
+		hargs = append(hargs, method)
+	}
+	hrows, err := e.query(hq, hargs...)
 	if err == nil {
 		defer hrows.Close()
 		byHour := make([]int, 24)
 		for hrows.Next() {
-			var h, n int
-			if err := hrows.Scan(&h, &n); err == nil && h >= 0 && h < 24 {
-				byHour[h] = n
+			var ts int64
+			if err := hrows.Scan(&ts); err == nil {
+				byHour[time.Unix(ts, 0).Hour()]++
 			}
 		}
 		bestStart, best := 0, -1
@@ -321,7 +327,7 @@ func (e *Engine) FailureAnalysis(w Window, method string) (*FactSet, error) {
 		}
 		if total > 0 && float64(best)/float64(total) >= 0.35 {
 			fs.add("peak_band_count", fmt.Sprintf("%d", best), float64(best))
-			fs.Notes = append(fs.Notes, fmt.Sprintf("%d of %d failures fall in %02d:00-%02d:00 IST",
+			fs.Notes = append(fs.Notes, fmt.Sprintf("%d of %d failures fall between %02d:00 and %02d:00 local time",
 				best, total, bestStart, (bestStart+4)%24))
 		}
 	}

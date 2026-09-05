@@ -36,9 +36,9 @@ type Session struct {
 	Policy   policy.Config
 	Provider llm.Provider
 
-	LinksSent           int
-	ForceInteractive    *bool
-	LastExplain *Explain
+	LinksSent        int
+	ForceInteractive *bool
+	LastExplain      *Explain
 }
 
 // Explain is what `--explain` / `/explain` prints. Principle 4 is enforced by
@@ -79,12 +79,12 @@ func (e *Explain) String() string {
 
 // Answer is one completed turn.
 type Answer struct {
-	Plan     *planner.Plan       `json:"plan"`
-	Facts    *analytics.FactSet  `json:"facts,omitempty"`
-	Text     string              `json:"text"`
-	Explain  *Explain            `json:"explain"`
-	Refusal  string              `json:"refusal,omitempty"`
-	WriteReq *WriteRequest       `json:"write_request,omitempty"`
+	Plan     *planner.Plan      `json:"plan"`
+	Facts    *analytics.FactSet `json:"facts,omitempty"`
+	Text     string             `json:"text"`
+	Explain  *Explain           `json:"explain"`
+	Refusal  string             `json:"refusal,omitempty"`
+	WriteReq *WriteRequest      `json:"write_request,omitempty"`
 }
 
 func Open(cfg Config) (*Session, error) {
