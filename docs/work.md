@@ -3,9 +3,7 @@
 **The AI-native terminal for Razorpay.**
 Shipped as `razorpay ai`, a subcommand of the official Razorpay CLI.
 
-Author: Ankush
-Status: Draft v1 — for internship submission
-License target: MIT (matches both upstream repos)
+Author: Rajarshi
 
 ---
 
