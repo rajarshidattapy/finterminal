@@ -88,6 +88,7 @@ type QueryPlan struct {
 	CompareTo  string     `json:"compare_to,omitempty"` // "" or "previous_period"
 	Filters    Filters    `json:"filters"`
 	GroupBy    []string   `json:"group_by,omitempty"`
+	SortBy     string     `json:"sort_by,omitempty"` // "" (most recent) or "amount"
 	EntityID   string     `json:"entity_id,omitempty"`
 	Limit      int        `json:"limit,omitempty"`
 }
@@ -162,6 +163,11 @@ func (p *Plan) Validate() error {
 		}
 		if q.Filters.MinAmountPaise < 0 {
 			return fmt.Errorf("negative min_amount_paise")
+		}
+		switch q.SortBy {
+		case "", "recent", "amount":
+		default:
+			return fmt.Errorf("unsupported sort_by %q", q.SortBy)
 		}
 		if q.Limit < 0 || q.Limit > 500 {
 			return fmt.Errorf("limit out of range: %d", q.Limit)

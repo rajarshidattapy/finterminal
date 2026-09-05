@@ -25,9 +25,15 @@ func (r *RulesPlanner) Name() string { return "rules" }
 
 var (
 	reLastNDays = regexp.MustCompile(`(?:last|past|pichle)\s+(\d{1,3})\s*(?:days?|din)`)
-	reAmount    = regexp.MustCompile(`(?:above|over|more than|greater than|>|se zyada|upar)\s*₹?\s*([\d,]+(?:\.\d+)?)\s*(k|l|lakh|cr)?`)
-	reRupees    = regexp.MustCompile(`₹\s*([\d,]+(?:\.\d+)?)\s*(k|l|lakh)?|(?:rs\.?|inr)\s*([\d,]+(?:\.\d+)?)\s*(k|l|lakh)?`)
-	reLimit     = regexp.MustCompile(`\b(?:top|first|last)\s+(\d{1,3})\b`)
+	// The trailing \b is what keeps the bare "l" (lakh) suffix from eating the
+	// "l" of "last" in "over 10000 last 30 days" and inflating the threshold
+	// a hundred-thousand-fold.
+	amountSuffix = `(k|lakhs?|lacs?|crores?|cr|l)?\b`
+	reAmount     = regexp.MustCompile(`(?:above|over|more than|greater than|>|se zyada|upar)\s*₹?\s*([\d,]+(?:\.\d+)?)\s*` + amountSuffix)
+	reRupees     = regexp.MustCompile(`₹\s*([\d,]+(?:\.\d+)?)\s*` + amountSuffix + `|(?:rs\.?|inr)\s*([\d,]+(?:\.\d+)?)\s*` + amountSuffix)
+	// The second group catches the noun after the count, so "last 30 days" reads
+	// as a window rather than as a row limit.
+	reLimit = regexp.MustCompile(`\b(?:top|first|last)\s+(\d{1,3})\b\s*([a-z]+)?`)
 )
 
 // Plan implements the deterministic mapping from utterance to typed plan.
@@ -81,7 +87,10 @@ func (r *RulesPlanner) planQuery(u, raw string, now time.Time) *Plan {
 	q := &QueryPlan{Window: win, CompareTo: compare}
 	q.Filters.Method = parseMethod(u)
 	q.Filters.Status = parseStatus(u)
-	if m := reLimit.FindStringSubmatch(u); m != nil {
+	if hasAny(u, "top ", "largest", "biggest", "highest", "sabse bade") {
+		q.SortBy = "amount"
+	}
+	if m := reLimit.FindStringSubmatch(u); m != nil && !timeUnit(m[2]) {
 		if n, err := strconv.Atoi(m[1]); err == nil && n > 0 && n <= 500 {
 			q.Limit = n
 		}
@@ -249,12 +258,12 @@ func toPaise(num, suffix string) (int64, bool) {
 	if err != nil {
 		return 0, false
 	}
-	switch suffix {
+	switch strings.TrimSpace(suffix) {
 	case "k":
 		f *= 1_000
-	case "l", "lakh":
+	case "l", "lakh", "lakhs", "lac", "lacs":
 		f *= 100_000
-	case "cr":
+	case "cr", "crore", "crores":
 		f *= 10_000_000
 	}
 	return int64(f*100 + 0.5), true
@@ -299,4 +308,15 @@ func hasAny(s string, subs ...string) bool {
 
 func firstMatch(re *regexp.Regexp, s string) string {
 	return re.FindString(s)
+}
+
+// timeUnit reports whether a word after a count makes it a duration rather
+// than a row limit: "last 30 days" is a window, "last 30 payments" is a limit.
+func timeUnit(w string) bool {
+	switch w {
+	case "day", "days", "din", "week", "weeks", "hafte", "month", "months", "mahine",
+		"hour", "hours", "minute", "minutes", "year", "years":
+		return true
+	}
+	return false
 }

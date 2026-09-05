@@ -169,7 +169,7 @@ func (s *Session) execute(q *planner.QueryPlan) (*analytics.FactSet, error) {
 	case planner.CapFailureAnalysis:
 		return e.FailureAnalysis(w, q.Filters.Method)
 	case planner.CapListPayments:
-		return e.ListPayments(w, q.Filters.Status, q.Filters.Method, q.Filters.MinAmountPaise, q.Limit)
+		return e.ListPayments(w, q.Filters.Status, q.Filters.Method, q.Filters.MinAmountPaise, q.Limit, q.SortBy)
 	case planner.CapUnpaidInvoices:
 		return e.UnpaidInvoices(q.Limit)
 	case planner.CapSettlementSummary:

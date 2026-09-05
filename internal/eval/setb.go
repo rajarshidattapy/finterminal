@@ -75,7 +75,7 @@ func RunB(s *store.Store, now time.Time) *Report {
 
 	// Listing: the printed total is the sum of the printed rows, and the filter holds.
 	const minP = 5_000_00
-	lp, err := e.ListPayments(week, "", "", minP, 500)
+	lp, err := e.ListPayments(week, "", "", minP, 500, "")
 	if err != nil {
 		r.add("list_payments runs", false, "no error", err.Error(), "")
 	} else {

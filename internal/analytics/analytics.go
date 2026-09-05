@@ -337,7 +337,7 @@ func (e *Engine) FailureAnalysis(w Window, method string) (*FactSet, error) {
 }
 
 // ListPayments returns matching payments, newest first.
-func (e *Engine) ListPayments(w Window, status, method string, minPaise int64, limit int) (*FactSet, error) {
+func (e *Engine) ListPayments(w Window, status, method string, minPaise int64, limit int, sortBy string) (*FactSet, error) {
 	fs := &FactSet{Capability: "list_payments", Tables: map[string][]Row{}}
 	q := `SELECT id, status, method, amount_paise, COALESCE(email,''), created_at FROM payments
         WHERE created_at >= ? AND created_at < ?`
@@ -357,7 +357,11 @@ func (e *Engine) ListPayments(w Window, status, method string, minPaise int64, l
 	if limit <= 0 || limit > 500 {
 		limit = 50
 	}
-	q += ` ORDER BY created_at DESC LIMIT ?`
+	if sortBy == "amount" {
+		q += ` ORDER BY amount_paise DESC LIMIT ?`
+	} else {
+		q += ` ORDER BY created_at DESC LIMIT ?`
+	}
 	args = append(args, limit)
 	rows, err := e.query(q, args...)
 	if err != nil {
