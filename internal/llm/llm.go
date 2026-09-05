@@ -20,16 +20,24 @@ type Provider interface {
 	Complete(ctx context.Context, system, user string, maxTokens int) (string, error)
 }
 
-// FromEnv returns a configured provider, or nil when none is available. A nil
-// provider is a supported mode: the rules planner and template narrator carry
-// the product on their own.
+// httpTimeout bounds every provider call. Two calls per turn, so a hung
+// provider must not hold the terminal.
+const httpTimeout = 30 * time.Second
+
+// FromEnv returns a configured provider, or nil when none is available. OpenAI
+// is checked first; Anthropic remains wired up because the point of this seam
+// is that swapping vendors costs one file. A nil provider is a supported mode:
+// the rules planner and template narrator carry the product on their own.
 func FromEnv() Provider {
+	if p := openAIFromEnv(); p != nil {
+		return p
+	}
 	if key := os.Getenv("ANTHROPIC_API_KEY"); key != "" {
 		model := os.Getenv("FINTERMINAL_MODEL")
 		if model == "" {
 			model = "claude-sonnet-5"
 		}
-		return &Anthropic{Key: key, Model: model, HTTP: &http.Client{Timeout: 30 * time.Second}}
+		return &Anthropic{Key: key, Model: model, HTTP: &http.Client{Timeout: httpTimeout}}
 	}
 	return nil
 }

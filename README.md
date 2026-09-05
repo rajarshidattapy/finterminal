@@ -75,8 +75,17 @@ go build -o finterminal .
 No credentials are needed: `sync` ships with a deterministic fixture generator
 (90 days, ~4,000 payments, a real revenue drop driven by a UPI failure spike in
 a bank downtime window) so a reviewer goes from `git clone` to a working answer
-in under a minute. Set `ANTHROPIC_API_KEY` to enable the LLM planner and
-narrator — **the numbers are identical either way, because Go computes them.**
+in under a minute.
+
+Set `OPENAI_API_KEY` to enable the LLM planner and narrator — **the numbers are
+identical either way, because Go computes them.** The default model is
+`gpt-4o-mini`; override with `FINTERMINAL_MODEL`, or point `OPENAI_BASE_URL` at
+a compatible gateway. `ANTHROPIC_API_KEY` works too — `llm.Provider` is a
+one-method interface, so a vendor is one file.
+
+With no key the status line reads `no model (rules + templates)` and everything
+still works: the deterministic planner scores 60/60 on Set A, and the template
+narrator renders every capability.
 
 The REPL opens on the wordmark, drawn in Razorpay's brand blues — Dodger Blue
 (`#0D94FB`) fading toward Green Vogue (`#012652`):
@@ -135,7 +144,7 @@ finterminal help                         # every flag, including --no-color
 | `internal/mcp` | stdio JSON-RPC client for `razorpay-mcp-server`, launched with `--read-only` unless the session is elevated. |
 | `internal/audit` | Append-only JSONL at `~/.razorpay/ai-audit.log`, redacted field by field. |
 | `internal/eval` | Sets A, B and C. Also runs under `go test`. |
-| `internal/llm` | The one-method seam every model provider sits behind. |
+| `internal/llm` | The one-method seam every model provider sits behind — OpenAI (`gpt-4o-mini`, default) and Anthropic. |
 | `internal/ui` | Banner, brand palette and colour-level detection (truecolor / basic / none, with Windows VT switching). |
 
 ## The invariants

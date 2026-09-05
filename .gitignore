@@ -4,3 +4,4 @@ finterminal.exe
 *.db-wal
 *.db-shm
 ai-audit.log
+.env

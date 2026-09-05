@@ -125,9 +125,11 @@ Flags:
 `)
 	flag.PrintDefaults()
 	fmt.Fprint(os.Stderr, `
-Model: set ANTHROPIC_API_KEY to enable the LLM planner and narrator. Without
-one, the deterministic planner and template narrator carry every capability —
-the numbers are identical either way, because Go computes them.
+Model: set OPENAI_API_KEY to enable the LLM planner and narrator (default model
+gpt-4o-mini; override with FINTERMINAL_MODEL, or point OPENAI_BASE_URL at a
+compatible gateway). ANTHROPIC_API_KEY also works. Without a key, the
+deterministic planner and template narrator carry every capability — the numbers
+are identical either way, because Go computes them.
 `)
 }
 
