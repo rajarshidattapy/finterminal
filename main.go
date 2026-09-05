@@ -18,6 +18,7 @@ import (
 	"github.com/rajarshidattapy/finterminal/internal/fixtures"
 	"github.com/rajarshidattapy/finterminal/internal/planner"
 	"github.com/rajarshidattapy/finterminal/internal/store"
+	"github.com/rajarshidattapy/finterminal/internal/ui"
 )
 
 const version = "0.1.0"
@@ -34,6 +35,7 @@ func main() {
 		lastN     = flag.Int("last", 20, "audit: entries to show")
 		set       = flag.String("set", "all", "eval: a, b, c or all")
 		verbose   = flag.Bool("v", false, "eval: show passing cases too")
+		noColor   = flag.Bool("no-color", false, "plain output, no ANSI colour (NO_COLOR is honoured too)")
 	)
 	flag.Usage = usage
 	// Flags are accepted before or after the question, so `finterminal "..."
@@ -51,6 +53,11 @@ func main() {
 		WriteMode: *writeMode, LiveMode: *liveMode, JSONOut: *jsonOut,
 	}
 
+	paint := ui.NewPainter(os.Stdout)
+	if *noColor {
+		paint = &ui.Painter{Level: ui.None}
+	}
+
 	switch cmd {
 	case "sync":
 		os.Exit(cmdSync(cfg, *days))
@@ -59,11 +66,13 @@ func main() {
 	case "eval":
 		os.Exit(cmdEval(cfg, *set, *verbose))
 	case "version":
-		fmt.Println("finterminal " + version)
+		fmt.Print(paint.Banner())
+		fmt.Printf("\n  rzp-ai %s · finterminal\n\n", version)
 	case "help":
+		fmt.Print(paint.Banner())
 		usage()
 	case "":
-		os.Exit(cmdREPL(cfg, *explain))
+		os.Exit(cmdREPL(cfg, *explain, paint))
 	default:
 		os.Exit(cmdOneShot(cfg, strings.Join(args, " "), *explain))
 	}
@@ -248,7 +257,7 @@ func cmdOneShot(cfg app.Config, utterance string, explain bool) int {
 	return render(s, a, explain, bufio.NewReader(os.Stdin))
 }
 
-func cmdREPL(cfg app.Config, explain bool) int {
+func cmdREPL(cfg app.Config, explain bool, paint *ui.Painter) int {
 	s, err := app.Open(cfg)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -257,36 +266,38 @@ func cmdREPL(cfg app.Config, explain bool) int {
 	defer s.Close()
 
 	in := bufio.NewReader(os.Stdin)
-	fmt.Printf("\n  %s\n  Ask a question, or /help.\n\n", s.StatusLine())
+	fmt.Print(paint.Banner())
+	fmt.Print(paint.Tagline())
+	fmt.Printf("\n%s\n  %s\n\n", paint.StatusLine(s.StatusLine()), paint.Dim("Ask a question, or /help."))
 	if s.Store.CountPayments() == 0 {
 		fmt.Print("  The local mirror is empty — run `finterminal sync` in another shell.\n")
 	}
 	for {
-		fmt.Print("finterminal> ")
+		fmt.Print(paint.Prompt())
 		line, err := in.ReadString('\n')
 		if err != nil {
 			fmt.Println()
 			return 0
 		}
 		line = strings.TrimSpace(line)
-		switch {
-		case line == "":
+		switch line {
+		case "":
 			continue
-		case line == "/quit" || line == "/exit" || line == "exit":
+		case "/quit", "/exit", "exit":
 			return 0
-		case line == "/help":
+		case "/help":
 			fmt.Printf("\n  /explain   how the last answer was produced\n"+
 				"  /status    session and mirror state\n"+
 				"  /caps      the supported capability surface\n"+
 				"  /quit      leave\n\n%s\n", planner.CapabilityList())
 			continue
-		case line == "/status":
-			fmt.Printf("\n  %s\n\n", s.StatusLine())
+		case "/status":
+			fmt.Printf("\n%s\n\n", paint.StatusLine(s.StatusLine()))
 			continue
-		case line == "/caps":
+		case "/caps":
 			fmt.Printf("\n  %s\n", planner.CapabilityList())
 			continue
-		case line == "/explain":
+		case "/explain":
 			if s.LastExplain == nil {
 				fmt.Print("\n  Nothing answered yet.\n\n")
 				continue

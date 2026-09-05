@@ -216,7 +216,7 @@ func (s *Session) StatusLine() string {
 	if s.Provider != nil {
 		model = s.Provider.Name()
 	}
-	return fmt.Sprintf("finterminal · %s · %s · synced %s · %d payments · %s",
+	return fmt.Sprintf("rzp-ai · %s · %s · synced %s · %d payments · %s",
 		env, mode, s.syncedLabel(), s.Store.CountPayments(), model)
 }
 

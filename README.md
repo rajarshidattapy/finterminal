@@ -30,6 +30,26 @@ $ finterminal "why did revenue drop this week"
   ↳ 4 queries over 472 rows · 0ms · /explain for detail
 ```
 
+## Built on Razorpay's open source
+
+Two Razorpay projects sit next to each other and don't talk. This is the layer
+between them.
+
+| Repo | What it is | What it contributes here |
+|---|---|---|
+| [**razorpay/razorpay-cli**](https://github.com/razorpay/razorpay-cli) | Go/Cobra CLI over the Razorpay API, MIT | The home this belongs in. `rzp-ai` is designed to land as `cmd/ai/` — a `razorpay ai` subcommand following the repo's one-package-per-resource extension pattern — and to import its `api/` package directly as a Go library for the resources MCP doesn't expose (invoices, disputes, customers, subscriptions, Route, Smart Collect). |
+| [**razorpay/razorpay-mcp-server**](https://github.com/razorpay/razorpay-mcp-server) | Go MCP server exposing ~45 Razorpay tools, MIT | The primary executor. `internal/mcp` speaks stdio JSON-RPC to it and launches it with `--read-only` for every non-elevated session, so a read session physically cannot mutate. It's the officially maintained AI surface, and using it is the point. |
+
+Both share one gap: **no aggregation.** Every tool and command is fetch-one or
+list-with-filters — nothing computes a trend, a rate or a delta. That gap is
+what `internal/analytics` fills, and filling it in Go rather than in a prompt is
+what makes the answers auditable.
+
+The `internal/mcp` client is written against the documented flags (`--key`,
+`--secret`, `--read-only`, `--toolsets`) and needs a `razorpay-mcp-server`
+binary to exercise; `sync` currently uses the bundled fixture generator so the
+project runs with no credentials at all.
+
 ## Eval results
 
 Run them yourself: `finterminal eval` (or `go test ./...`).
@@ -55,6 +75,28 @@ a bank downtime window) so a reviewer goes from `git clone` to a working answer
 in under a minute. Set `ANTHROPIC_API_KEY` to enable the LLM planner and
 narrator — **the numbers are identical either way, because Go computes them.**
 
+The REPL opens on the wordmark, drawn in Razorpay's brand blues — Dodger Blue
+(`#0D94FB`) fading toward Green Vogue (`#012652`):
+
+```
+  ░█████████  ░█████████ ░█████████             ░███    ░██████
+  ░██     ░██       ░██  ░██     ░██           ░██░██     ░██
+  ░██     ░██      ░██   ░██     ░██          ░██  ░██    ░██
+  ░█████████     ░███    ░█████████  ░██████ ░█████████   ░██
+  ░██   ░██     ░██      ░██                 ░██    ░██   ░██
+  ░██    ░██   ░██       ░██                 ░██    ░██   ░██
+  ░██     ░██ ░█████████ ░██                 ░██    ░██ ░██████
+  the model plans and explains — it does not calculate, and it does not move money
+
+  rzp-ai · test mode · read-only · synced 2m ago · 4,056 payments · rules + templates
+
+rzp-ai>
+```
+
+`WRITE ENABLED` and `live mode` are painted so they cannot be skimmed past.
+Colour degrades to plain ASCII when piped, when `NO_COLOR` is set, with
+`--no-color`, or on a terminal that won't take ANSI.
+
 ```bash
 finterminal                              # REPL
 finterminal "settlement total" --json    # scriptable, no narration
@@ -62,6 +104,8 @@ finterminal --write                      # enables the write plane
 finterminal sync [--days 90]             # refresh the local mirror
 finterminal audit [--last 20]            # read the append-only audit log
 finterminal eval [--set a|b|c|all]       # run the eval harness
+finterminal version                      # wordmark and version
+finterminal help                         # every flag, including --no-color
 ```
 
 ## Architecture
@@ -89,6 +133,7 @@ finterminal eval [--set a|b|c|all]       # run the eval harness
 | `internal/audit` | Append-only JSONL at `~/.razorpay/ai-audit.log`, redacted field by field. |
 | `internal/eval` | Sets A, B and C. Also runs under `go test`. |
 | `internal/llm` | The one-method seam every model provider sits behind. |
+| `internal/ui` | Banner, brand palette and colour-level detection (truecolor / basic / none, with Windows VT switching). |
 
 ## The invariants
 
