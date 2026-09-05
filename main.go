@@ -14,6 +14,7 @@ import (
 
 	"github.com/rajarshidattapy/finterminal/internal/app"
 	"github.com/rajarshidattapy/finterminal/internal/audit"
+	"github.com/rajarshidattapy/finterminal/internal/config"
 	"github.com/rajarshidattapy/finterminal/internal/eval"
 	"github.com/rajarshidattapy/finterminal/internal/fixtures"
 	"github.com/rajarshidattapy/finterminal/internal/planner"
@@ -24,6 +25,10 @@ import (
 const version = "0.1.0"
 
 func main() {
+	// Load .env before any flag default or provider lookup reads the
+	// environment. A real environment variable always beats the file.
+	envFile := config.LoadDotEnv()
+
 	var (
 		writeMode = flag.Bool("write", false, "enable the write plane (confirmations still required)")
 		liveMode  = flag.Bool("live", false, "operate against live mode (refunds stay blocked in v1)")
@@ -72,7 +77,7 @@ func main() {
 		fmt.Print(paint.Banner())
 		usage()
 	case "":
-		os.Exit(cmdREPL(cfg, *explain, paint))
+		os.Exit(cmdREPL(cfg, *explain, paint, envFile))
 	default:
 		os.Exit(cmdOneShot(cfg, strings.Join(args, " "), *explain))
 	}
@@ -259,7 +264,7 @@ func cmdOneShot(cfg app.Config, utterance string, explain bool) int {
 	return render(s, a, explain, bufio.NewReader(os.Stdin))
 }
 
-func cmdREPL(cfg app.Config, explain bool, paint *ui.Painter) int {
+func cmdREPL(cfg app.Config, explain bool, paint *ui.Painter, envFile string) int {
 	s, err := app.Open(cfg)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -270,7 +275,11 @@ func cmdREPL(cfg app.Config, explain bool, paint *ui.Painter) int {
 	in := bufio.NewReader(os.Stdin)
 	fmt.Print(paint.Banner())
 	fmt.Print(paint.Tagline())
-	fmt.Printf("\n%s\n  %s\n\n", paint.StatusLine(s.StatusLine()), paint.Dim("Ask a question, or /help."))
+	fmt.Printf("\n%s\n", paint.StatusLine(s.StatusLine()))
+	if envFile != "" {
+		fmt.Printf("  %s\n", paint.Dim("environment from "+envFile))
+	}
+	fmt.Printf("  %s\n\n", paint.Dim("Ask a question, or /help."))
 	if s.Store.CountPayments() == 0 {
 		fmt.Print("  The local mirror is empty — run `finterminal sync` in another shell.\n")
 	}
