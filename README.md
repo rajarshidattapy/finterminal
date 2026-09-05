@@ -2,6 +2,9 @@
 
 **The AI-native terminal for Razorpay finance operations.**
 
+<img width="949" height="339" alt="image" src="https://github.com/user-attachments/assets/f1a815f7-7a64-4fb1-aa0c-cba12fcc4725" />
+
+
 > The model plans and explains. It does not calculate, and it does not move money.
 > Everything in this repository exists to make that sentence true.
 
